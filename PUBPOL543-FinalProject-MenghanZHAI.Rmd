@@ -1,0 +1,591 @@
+##
+## PUBPOL543-Plot1: univariate - Frequency Table of Race in the United States
+##  Menghan Zhai
+##
+
+upload ACS data
+```{r}
+library(foreign)
+link = "https://github.com/G7-PUBPOL-543/ACS/raw/main/ManipulatedACS_V2.dta"
+ACSData = read.dta(link)
+```
+
+check variable: race
+```{r}
+# Check names of all the variables in ACS Data
+names(ACSData)
+```
+```{r}
+#see values in the variable race:
+head(ACSData$race,20)
+```
+
+get frequency table of race: RaceFreq
+```{r}
+# absolute values
+RaceCount=table(ACSData$race,
+                exclude = 'nothing') 
+RaceCount
+```
+```{r}
+# relative values
+RaceProptoplot=prop.table(RaceCount)*100
+RaceProptoplot
+```
+```{r}
+# Turn the frequency table into a data frame:
+RaceFreq=as.data.frame(RaceProptoplot)
+```
+```{r}
+# renaming data frame
+names(RaceFreq)=c("race","pct")
+
+RaceFreq
+```
+
+Time to plot!
+```{r}
+library(ggplot2)
+```
+
+Order RaceFreq
+```{r}
+RaceFreq = RaceFreq[order(RaceFreq$pct),]
+
+RaceFreq
+```
+```{r}
+# save the order
+RaceOrd = RaceFreq[order(RaceFreq$pct),'race']
+```
+
+base
+```{r}
+base = ggplot(data = RaceFreq, 
+             aes(x = race,
+                 y = pct)) 
+base = base + theme_light() # add background: light theme
+## add order
+base= base + scale_x_discrete(limits=RaceOrd) 
+
+base
+```
+
+plot1: + geom bar
+```{r}
+plot1 = base + geom_bar(stat='identity')
+
+plot1
+```
+
+plot2: + title
+```{r}
+# name the title
+TitleRace = list(Title = "Frequency Table of Race in the United States",
+                 SubTi = NULL,
+                 XTi = "Race",
+                 YTi = "Percentage",
+                 Sou = "Source: 2019 American Community Survey (ACS) Data")
+```
+```{r}
+# add title
+plot2 = plot1 + labs(title = TitleRace$Title,
+                    subtitle = TitleRace$SubTi,
+                    x = TitleRace$XTi,
+                    y = TitleRace$YTi,
+                    caption = TitleRace$Sou)
+plot2
+```
+
+plot3: customize Y axis
+```{r}
+library(scales)
+plot3 = plot2 + scale_y_continuous(breaks = c(5, 10, 20, 40, 60, 80),
+                                   limits = c(0, 80),
+                                   labels = unit_format(suffix = '%')) 
+plot3
+```
+
+plot4: Title/subtitle positions:
+```{r}
+plot4 = plot3 + theme(plot.caption = element_text(hjust = 1),
+                      plot.title = element_text(hjust = 0.5))
+plot4 = plot4 + coord_flip() # flip the plot to fully show the types of race
+
+plot4
+```
+
+plot5: Annotating the bars:
+```{r}
+paste0(round(RaceFreq$pct,2), '%')
+LABELS=paste0(round(RaceFreq$pct,2), '%')
+```
+```{r}
+plot5 = plot4 + geom_text(vjust = 0,
+                          hjust = -0.1,
+                          size = 3,
+                          aes(y = pct ,
+                              label = LABELS))
+plot5
+```
+
+# Final Univariate Plot
+```{r}
+plot5
+```
+
+
+
+##
+## PUBPOL543-Plot2: bivariate - Contingency Tables of Race and Health Insurance Coverage in the United States
+## Menghan Zhai
+##
+
+I'll explore Race and Health Insurance Coverage in the United States in this plot.
+As these two variable are both categorical, I'll use contigency tables to organize the relationship.
+```{r}
+head(ACSData,5)
+```
+```{r}
+# check variable hcovany: with health insurance coverage or not
+head(ACSData$hcovany,20)
+```
+
+```{r}
+# contingency table of counts
+(RaceHIC = table(ACSData$race,ACSData$hcovany)) # race and health insurance coverage
+```
+```{r}
+# compute marginal percent (per column) from contingency table
+library(magrittr)
+(RaceHIC_mgCol = prop.table(RaceHIC,
+                            margin = 2)%>%round(.,3))
+```
+```{r}
+#make a data frame from contingency table
+RaceHIC_DF = as.data.frame(RaceHIC)
+names(RaceHIC_DF) = c("race","HICstatus","counts")
+
+RaceHIC_DF
+```
+```{r}
+#adding marginal percents:
+RaceHIC_DF$pctCol = as.data.frame(RaceHIC_mgCol)[,3]
+
+RaceHIC_DF
+```
+
+# a grouped chart
+```{r}
+library(ggplot2)
+base1 = ggplot(data = RaceHIC_DF, 
+             aes(x = HICstatus, y = counts,
+                 fill= race ))
+
+barGC = base1 +  geom_bar(stat = "identity",
+                          position = 'dodge') 
+barGC
+```
+```{r}
+# add labels
+barGC + geom_text(position = position_dodge(width=0.9),
+                  angle = 90,
+                  hjust = -0.5,
+                  aes(label = counts)) 
+```
+```{r}
+# change color
+barGC + scale_fill_brewer(palette="Paired")
+```
+
+reorder by race
+```{r}
+RaceHIC_DF$race = factor(RaceHIC_DF$race,
+                         levels = c("white","black/african american/negro","other asian or pacific islander", "other race, nec","two major races","chinese","american indian or alaska native","three or more major races","japanese"))
+```
+
+```{r}
+library(ggplot2)
+base1 = ggplot(data = RaceHIC_DF, 
+               aes(x = HICstatus,
+                   y = counts,
+                   fill= race ))
+
+barGC = base1 +  geom_bar(stat = "identity",
+                          position = 'dodge') 
+#labels
+barGC = barGC + geom_text(position = position_dodge(width=0.9),
+                          angle = 90,
+                          hjust = -0.5,
+                          aes(label = counts)) 
+# palette with ordering
+barGC = barGC + scale_fill_brewer(name = "PRECINCT",
+                          palette = "BuPu",
+                          direction = -1)
+barGC
+```
+
+go from dodge to stack:
+```{r}
+# Stacked bar plot
+conditionColor = ifelse(RaceHIC_DF$race%in%c("white",'black/african american/negro'),'grey80','grey50')
+barStacked = base1 + geom_bar(stat = "identity",
+                              position = 'stack')#default
+barStacked = barStacked + geom_text(size = 5,
+                                    fontface='bold',
+                                    position = position_stack(vjust = 0.5),
+                                    color=conditionColor,
+                                    aes(label=counts))# its own AES!
+barStacked + scale_fill_brewer(palette="GnBu",
+                               direction = -1)
+```
+
+stacked percent
+```{r}
+library(scales) 
+
+base2 = ggplot(data = RaceHIC_DF, 
+               aes(fill = race,y = counts,x = HICstatus)) 
+
+barStackPct = base1 + geom_bar(stat = "identity",
+                               position = "fill")
+
+barStackPct1 = barStackPct + geom_text(size = 5,
+                                       position = position_fill(vjust = 0.5),
+                                       aes(label = percent(pctCol,accuracy = 0.1)))
+
+barStackPct1
+```
+```{r}
+# change the ratio of x, y axis
+barStackPct2 = barStackPct + geom_text(size = 1,
+                                       position = position_fill(vjust = 0.5),
+                                       aes(label = percent(pctCol,accuracy = 0.1)))
+
+barStackPct2 = barStackPct2 + coord_fixed(ratio=10/1)+scale_y_continuous(breaks = seq(0,1,0.1))
+barStackPct2 
+```
+
+Couldn't show all. It seems this is the "bad idea" introduced in class.
+I would have to reproduce the table.
+
+# try heatplot
+```{r}
+base  = ggplot(RaceHIC_DF, aes(x = HICstatus, 
+                               y = reorder(race, pctCol), 
+                               fill = pctCol*100)) 
+heat = base +  geom_tile()
+
+# color intensity
+heat = heat + scale_fill_gradient(low = "white",
+                                  high = "black")
+heat = heat + theme_classic()
+
+heat
+```
+```{r}
+# improve heat plot
+
+heat = heat + labs(y="Race", "Health Insurance Coverage Status")
+heat = heat + theme(axis.text.x = element_text(angle = 0, 
+                                               vjust = 0.6), 
+                      legend.title = element_blank(), #no leg. title 
+                      legend.position="top", 
+                      legend.direction="horizontal",
+                      legend.key.width=unit(1, "cm"),
+                      legend.key.height=unit(1, "cm")) 
+
+heat
+```
+```{r}
+TitleRaceHIC = list(Title = "Heat Plot-Race and Health Insurance Coverage in the U.S.",
+                    SubTi = NULL,
+                    XTi = "Health Insurance Coverage Status",
+                    YTi = "Race",
+                    Sou = "Source: IPUMS USA")
+```
+```{r}
+# add title
+heat2 = heat + labs(title = TitleRaceHIC$Title,
+                    subtitle = TitleRaceHIC$SubTi,
+                    x = TitleRaceHIC$XTi,
+                    y = TitleRaceHIC$YTi,
+                    caption = TitleRaceHIC$Sou)
+heat2
+```
+```{r}
+# heat3: Title positions:
+heat3 = heat2 + theme(plot.caption = element_text(hjust=1),
+                      plot.title = element_text(hjust=0.5))
+
+heat3
+```
+Still unobvious visually. Should I exclude "white"? Or is there some other way to retrieve this plot??
+
+# try contingency table
+```{r}
+# plot a representation of contingency table:
+
+library(ggplot2)                           
+base3 = ggplot(RaceHIC_DF, aes(x = HICstatus,y = counts)) 
+tablePlot = base3 + geom_point(aes(size = pctCol*100)) 
+tablePlot = tablePlot + geom_text(aes(label = percent(pctCol)),
+                                  nudge_x = 0.15,
+                                  size = 3)
+tablePlot
+```
+```{r}
+# improve the previous plot
+tablePlot = tablePlot + theme_minimal()
+tablePlot = tablePlot + theme(legend.position = "none")
+
+tablePlot
+```
+```{r}
+# barplot with less information
+base4 = ggplot(RaceHIC_DF, aes(x = race, y = counts)) 
+
+# bars
+bars = base4 + geom_bar(stat = "identity") + theme_minimal()
+
+# bar per health insurance status with 'facet'
+barsFa = bars + facet_grid(~ HICstatus) 
+
+barsFa
+```
+```{r}
+# improve previous plot
+# change the minimal theme
+barsFa = barsFa + theme(axis.text.x = element_text(angle = 90,
+                                                   hjust = 1,
+                                                   size = 7))
+barsFa
+```
+```{r}
+# original relationship Input-Output table
+base5  = ggplot(RaceHIC_DF, aes(x = race,  y = pctCol ) ) 
+barsIO = base5 + geom_bar( stat = "identity" )
+barsIO = barsIO + facet_grid( ~ HICstatus) 
+barsIO = barsIO + coord_flip()
+
+barsIO
+```
+
+```{r}
+# introduce "reorder""
+
+# race ordered by pctcol
+base5b  = ggplot(RaceHIC_DF, 
+                 aes(x = reorder(race, pctCol), #here
+                     y = pctCol) ) 
+
+barsIOb = base5b + geom_bar(stat = "identity")
+barsIOb = barsIOb + facet_grid( ~ HICstatus) 
+barsIOb = barsIOb + coord_flip() 
+
+barsIOb = barsIOb + theme(axis.text.y = element_text(size = 7,angle = 45)) 
+
+barsIOb
+```
+Nice try. Next step is to:
+add titles
+```{r}
+# name the title
+TitleRaHI = list(Title = " Health Insurance Coverage Status by Race in the United States",
+                 SubTi = NULL,
+                 XTi = "Race",
+                 YTi = "Percentage, Health Insurance Coverage Status",
+                 Sou = "Source: 2019 American Community Survey (ACS) Data")
+```
+```{r}
+# add title
+barsIObTi = barsIOb + labs(title = TitleRaHI$Title,
+                    subtitle = TitleRaHI$SubTi,
+                    x = TitleRaHI$XTi,
+                    y = TitleRaHI$YTi,
+                    caption = TitleRaHI$Sou)
+barsIObTi
+```
+
+title positions
+```{r}
+barsIObTi1 = barsIObTi + theme(plot.caption = element_text(hjust = 1),
+                               plot.title = element_text(hjust = 0.5))
+```
+
+# Final Bivariable Plot
+```{r}
+barsIObTi1
+```
+
+
+
+
+
+
+##
+## PUBPOL543-Map: Visualization of Poverty Rate by State in the United States
+## Menghan Zhai
+##
+
+Process ACSData
+```{r}
+head(ACSData$poverty,40)
+```
+
+# generate a new povertyst variable to show if one is in poverty. According to IPUM.USA, poverty < 100 represents "in poverty" status, and poverty>=100 is regarded as "not in poverty".
+```{r}
+ACSData$povertyst 
+ACSData$povertyst <- (ACSData$poverty < 100) # if poverty<100, then povertyst=TRUE, povertyst_num=1
+```
+```{r}
+ACSData$povertyst_num <- as.numeric(ACSData$povertyst) # generate a numeric variable to calculate poverty rate by state
+head(ACSData$povertyst_num,20)
+```
+```{r}
+head(ACSData,5) #check
+```
+```{r}
+library(dplyr)
+ACSData1 <- data.frame(ACSData$statefip , ACSData$povertyst_num) # Create a new data frame
+head(ACSData1,5)
+```
+
+# calculate the percent of "in poverty" of each state
+generate "count" variable to count for the total number of person of each state
+```{r}
+ACSData1$count 
+ACSData1$count <- 1
+head(ACSData1,5)
+```
+calculate
+```{r}
+library(dplyr)
+ACSData2 <- group_by(ACSData1, ACSData.statefip) %>%
+# group_by(ACSData1, ACSData.STATEFP) %>% 
+  mutate(percent = sum(ACSData.povertyst_num)/sum(count))
+head(ACSData2,5)
+```
+
+save the "percent" to new dataframe
+```{r}
+ACSData3 <- ACSData2 %>%
+  distinct(ACSData.statefip, percent, .keep_all = TRUE)
+
+head(ACSData3,5)
+```
+
+# generate a new "NAME" variable  in ACSData3 which equals the original statefip in ACS data to merge the data and the map.
+```{r}
+ACSData3$NAME = ACSData3$ACSData.statefip
+
+head(ACSData3,5)
+```
+
+# capitalize NAME in ACSData3 so that it is the same as NAME in map
+```{r}
+ACSData4 = as.data.frame(ACSData3) # change it to a data frame
+head(ACSData4,5)
+```
+```{r}
+ACSData4$NAME_char <- as.character(ACSData4$NAME) # Apply as.character function
+head(ACSData4$NAME_char,5)
+```
+```{r}
+library(Hmisc)
+ACSData4$NAME_char = capitalize(ACSData4$NAME_char)
+head(ACSData4,5)
+```
+```{r}
+ACSData4$NAME <- as.factor(ACSData4$NAME_char) 
+head(ACSData4,5)
+```
+
+# new column "poverty_rate" with the right name to show in map
+```{r}
+ACSData4$poverty_rate = ACSData4$percent 
+head(ACSData4,5)
+```
+
+# open the map
+```{r}
+linkMap="https://github.com/G7-PUBPOL-543/maps/raw/main/states.geojson"
+library(sf)
+```
+```{r}
+mapUS=read_sf(linkMap)
+```
+```{r}
+# see data in map
+head(mapUS)
+```
+
+```{r}
+str(ACSData4)
+```
+
+# Merge ACS data and U.S. map by state name
+```{r}
+mapUSVars=merge(mapUS,
+                ACSData4, 
+                by='NAME') 
+
+mapUSVars
+```
+
+# 1.Base layer: Map of U.S.
+```{r}
+library(ggplot2)
+# plot original map
+base = ggplot(data = mapUS) + geom_sf(fill = 'grey90',
+                                    color = NA) + theme_classic()
+
+base #base map of the U.S.
+```
+
+# 2.Data layer: Poverty Rate Map by State in the United States
+```{r}
+povMap= base + geom_sf(data = mapUSVars,
+                       aes(fill = poverty_rate),
+                       color = NA)
+povMap
+```
+
+change color
+```{r}
+povMap1 = povMap + scale_fill_gradient(low = 'blue',
+                                       high= 'yellow')
+```
+
+add titles
+```{r}
+# name the title
+TitlePovMap = list(Title = " Poverty Rate Map by State in the United States",
+                   SubTi = NULL,
+                   XTi = NULL,
+                   YTi = NULL,
+                   Sou = "Source: 2019 American Community Survey (ACS) Data")
+```
+```{r}
+# add title
+povMap2 = povMap1 + labs(title = TitlePovMap$Title,
+                    subtitle = TitlePovMap$SubTi,
+                    x = TitlePovMap$XTi,
+                    y = TitlePovMap$YTi,
+                    caption = TitlePovMap$Sou)
+povMap2
+```
+
+title positions
+```{r}
+povMap3 = povMap2 + theme(plot.caption = element_text(hjust = 1),
+                          plot.title = element_text(hjust = 0.5))
+
+```
+# Final Map
+```{r}
+povMap3
+```
+
+
+# That's all for my final project. Thank you!!
